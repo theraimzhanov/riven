@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { FORMATS, PLANS, findKnight, guest } from '../data/mock';
+import { BOTS as BOT_INFO, FORMATS, PLANS, leagueOf } from '../data/mock';
 import { Charge } from '../game/Charge';
+import { asKnight, ratingOf, saveMatch } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { BOTS } from '../rules/bots';
 import { newMatch, playPass, type MatchState } from '../rules/match';
@@ -24,10 +25,6 @@ const KEYS: [string, string][] = [
   ['J K L U I', 'At impact: drive, lock stirrups, duck, swivel, release'],
 ];
 
-const botFor = (name: string) =>
-  name.includes('Headhunter') ? BOTS.headhunter : name.includes('Turtle') ? BOTS.turtle : name.includes('Feinter') ? BOTS.feinter
-    : Object.values(BOTS)[name.length % 3];
-
 const Wear = ({ s }: { s: KnightState }) => (
   <span className="wear">
     <span>Stamina <b>{Math.round(s.stamina * 100)}%</b></span>
@@ -39,11 +36,12 @@ const Wear = ({ s }: { s: KnightState }) => (
 
 export default function Match() {
   const [q] = useSearchParams();
-  const { username } = useAuth();
+  const { user, profile } = useAuth();
   const format = FORMATS.find((f) => f.id === q.get('format')) ?? FORMATS[1];
-  const rated = q.get('rated') === '1';
-  const foe = findKnight(q.get('vs') ?? 'Mordane');
-  const you = guest(username ?? 'Guest');
+  const bot = BOT_INFO.find((b) => b.id === q.get('vs')) ?? BOT_INFO[0];
+  const foe = { name: bot.name, colors: bot.colors };
+  const you = profile ? asKnight(profile) : { name: 'Guest', colors: ['#b3121b', '#1b1b1f'] as [string, string] };
+  const [saved, setSaved] = useState('');
 
   const [match, setMatch] = useState<MatchState>(() => newMatch(format.passes));
   const [strikes, setStrikes] = useState<[Strike, Strike][]>([]);
@@ -51,15 +49,24 @@ export default function Match() {
   const [pass, setPass] = useState<{ plan: Plan; foe: PassInput } | null>(null);
   const [left, setLeft] = useState(PLAN_SECONDS);
   const [yielded, setYielded] = useState(false);
-  const [delta] = useState(() => 8 + Math.floor(Math.random() * 7)); // demo rating change
   const dialog = useRef<HTMLDialogElement>(null);
 
   const [me, them] = match.knights;
   const won = !yielded && match.winner === 0;
 
   function start(plan: Plan) { // both plans are locked in before the horses move
-    setPass({ plan, foe: botFor(foe.name)(them, me, Math.random) });
+    setPass({ plan, foe: BOTS[bot.id](them, me, Math.random) });
     setPhase('charge');
+  }
+
+  /** Keep the finished match in the knight's history. Guests have none. */
+  async function keep(m: MatchState, gaveUp: boolean) {
+    if (!user) return setSaved('Log in to keep your matches.');
+    const { error } = await saveMatch({
+      opponent: bot.name, format: format.id, won: !gaveUp && m.winner === 0,
+      score_for: m.score[0], score_against: m.score[1], ended_by: gaveUp ? 'yield' : m.endedBy ?? 'points',
+    });
+    setSaved(error ? 'This match could not be saved to your history.' : 'Saved to your history.');
   }
 
   function impact(mine: PassInput) {
@@ -67,6 +74,7 @@ export default function Match() {
     setMatch(next);
     setStrikes((s) => [...s, next.last!]);
     setPhase('hit');
+    if (next.winner !== null) keep(next, false);
     setTimeout(() => { setLeft(PLAN_SECONDS); setPhase(next.winner === null ? 'plan' : 'over'); }, 2200);
   }
 
@@ -81,7 +89,7 @@ export default function Match() {
 
   function reset() {
     dialog.current?.close();
-    setMatch(newMatch(format.passes)); setStrikes([]); setYielded(false); setLeft(PLAN_SECONDS); setPhase('plan');
+    setMatch(newMatch(format.passes)); setStrikes([]); setYielded(false); setSaved(''); setLeft(PLAN_SECONDS); setPhase('plan');
   }
 
   const describe = (s: Strike) => `${ZONE_NAMES[s.zone]}${s.points ? ` ${s.points > 0 ? '+' : '−'}${Math.abs(s.points)}` : ''}${s.lanceBroken ? ', lance broken' : ''}${s.unhorsed ? ', unhorse' : ''}`;
@@ -95,7 +103,7 @@ export default function Match() {
     <div className="grid2">
       <div className="stack">
         <div className="bar">
-          <span className="stack" style={{ gap: 4 }}><KnightCell k={foe} rating={foe.rating[format.id]} /><Wear s={them} /></span>
+          <span className="stack" style={{ gap: 4 }}><KnightCell k={foe} sub={`Bot, ${bot.rating}`} link={false} /><Wear s={them} /></span>
           <span className="score num">{match.score[1]}</span>
         </div>
 
@@ -114,7 +122,7 @@ export default function Match() {
         )}
 
         <div className="bar">
-          <span className="stack" style={{ gap: 4 }}><KnightCell k={you} rating={you.rating[format.id]} link={false} /><Wear s={me} /></span>
+          <span className="stack" style={{ gap: 4 }}><KnightCell k={you} sub={profile ? `${leagueOf(ratingOf(profile, format.id))} ${ratingOf(profile, format.id)}` : 'Not logged in'} link={false} /><Wear s={me} /></span>
           <span className="row">
             {phase === 'plan' && <span className={left <= 3 ? 'timer low' : 'timer'} aria-label={`${left} seconds to choose`}>0:{String(left).padStart(2, '0')}</span>}
             <span className="score num">{match.score[0]}</span>
@@ -143,7 +151,7 @@ export default function Match() {
         </div>
 
         <div className="panel">
-          <h2>{format.name}, {rated ? 'rated' : 'friendly'}</h2>
+          <h2>{format.name}, practice</h2>
           {strikes.length === 0 ? <p className="muted">No passes yet. Each pass appears here with where both lances landed.</p> : (
             <ol className="passes">
               {strikes.map((pair, i) => (
@@ -156,7 +164,7 @@ export default function Match() {
               ))}
             </ol>
           )}
-          <button className="link" disabled={phase !== 'plan'} onClick={() => { setYielded(true); setPhase('over'); }}>Yield the match</button>
+          <button className="link" disabled={phase !== 'plan'} onClick={() => { setYielded(true); setPhase('over'); keep(match, true); }}>Yield the match</button>
         </div>
       </div>
 
@@ -164,7 +172,8 @@ export default function Match() {
         <div className="shield-panel"><div>
           <h2>{won ? 'Victory' : 'Defeat'}</h2>
           <p className="muted" style={{ textAlign: 'center', margin: '0 auto 8px' }}>{outcome}</p>
-          <p className={`delta ${rated ? (won ? 'up' : 'down') : 'muted'}`}>{rated ? `${won ? '+' : '−'}${delta} rating` : 'Friendly, rating unchanged'}</p>
+          <p className="delta muted">Practice match, rating unchanged</p>
+          <p className="muted" role="status" style={{ textAlign: 'center', margin: '0 auto 16px' }}>{saved}</p>
           <div className="stack">
             <button className="btn" onClick={reset}>Rematch</button>
             <Link className="ghost" to="/play">New match</Link>

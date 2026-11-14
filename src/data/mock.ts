@@ -24,7 +24,7 @@ export interface Knight {
 const NAMES = ['Mordane', 'Ser_Isolde', 'BlackThorn', 'Ravenmoor', 'Ulric_the_Grey', 'Brannoch', 'Lady_Hesper', 'Ironhand',
   'Wulfgar', 'Seraphine', 'Dunstan', 'Corvin', 'Maelis', 'Aldric_Voss', 'Thessaly', 'Garrow'];
 const COUNTRIES = ['KG', 'US', 'DE', 'FR', 'TR', 'GB', 'KZ', 'ES', 'PL', 'IT', 'BR', 'JP', 'SE', 'CZ', 'NL', 'CA'];
-const TINCTURES = ['#b3121b', '#1b1b1f', '#8d9199', '#c9a227', '#1f3a5f', '#2f5d3a', '#e6e1d8', '#4a1f5c'];
+export const TINCTURES = ['#b3121b', '#1b1b1f', '#8d9199', '#c9a227', '#1f3a5f', '#2f5d3a', '#e6e1d8', '#4a1f5c'];
 
 export const knights: Knight[] = NAMES.map((name, i) => {
   const base = 2380 - i * 71;
@@ -45,10 +45,10 @@ export const guest = (name: string): Knight => ({
 export const findKnight = (name: string) => knights.find((k) => k.name === name) ?? guest(name);
 
 export const BOTS = [
-  { name: 'The Headhunter', rating: 1350, style: 'Aims for your helm every pass. Duck, or keep your shield high.' },
-  { name: 'The Turtle', rating: 1100, style: 'Braces and waits. Break the shield before you try to unhorse.' },
-  { name: 'The Feinter', rating: 1600, style: 'Hides the lance until the last second. Trust nothing you see early.' },
-];
+  { id: 'headhunter', name: 'The Headhunter', rating: 1350, colors: ['#b3121b', '#e6e1d8'] as [string, string], style: 'Aims for your helm every pass. Duck, or keep your shield high.' },
+  { id: 'turtle', name: 'The Turtle', rating: 1100, colors: ['#2f5d3a', '#8d9199'] as [string, string], style: 'Braces and waits. Break the shield before you try to unhorse.' },
+  { id: 'feinter', name: 'The Feinter', rating: 1600, colors: ['#4a1f5c', '#c9a227'] as [string, string], style: 'Hides the lance until the last second. Trust nothing you see early.' },
+] as const;
 
 export const PLANS = [
   { id: 'charge', name: 'Full charge', note: 'Hardest hit, heavy sway, costs stamina' },
@@ -71,21 +71,7 @@ export const tournaments: Tournament[] = [
 ];
 
 export const DRILLS = [
-  { name: 'Find the visor', goal: 'Land 5 helm strikes at a steady canter', bot: 'The Turtle', best: '3 of 5' },
-  { name: 'Hold the saddle', goal: 'Survive 3 full charges without being unhorsed', bot: 'The Headhunter', best: 'Not tried' },
-  { name: 'Read the feint', goal: 'Guard correctly against 4 late lances', bot: 'The Feinter', best: '1 of 4' },
-  { name: 'On the beat', goal: 'Reach top speed without a single stumble', bot: 'No opponent', best: 'Done' },
-];
-
-export const ARMOURY = [
-  { name: 'Quartered field', kind: 'Heraldry', note: 'Split your shield in four colours' },
-  { name: 'Blackened plate', kind: 'Armour', note: 'Oil-dark steel with a dull edge' },
-  { name: 'Thorn crest', kind: 'Helm', note: 'Iron briar across the brow' },
-  { name: 'Ash-grey destrier', kind: 'Horse', note: 'Pale coat, dark mane' },
-  { name: 'Blood caparison', kind: 'Horse cloth', note: 'Deep red, torn hem' },
-  { name: 'Splinter lance', kind: 'Lance', note: 'Striped shaft, breaks loud' },
-];
-
-// deterministic rating history for the profile graph
-export const history = (end: number) =>
-  Array.from({ length: 24 }, (_, i) => Math.round(end - 180 + i * 7.8 + Math.sin(i * 1.7) * 38 + Math.cos(i * 0.6) * 22));
+  { bot: 'turtle', name: 'Break the wall', goal: 'Beat The Turtle. Crack the shield twice, then go for the chest.' },
+  { bot: 'headhunter', name: 'Keep your head', goal: 'Beat The Headhunter. Guard high or duck, and punish the full charge.' },
+  { bot: 'feinter', name: 'Read the feint', goal: 'Beat The Feinter. Do not commit your shield until the lance comes down.' },
+] as const;

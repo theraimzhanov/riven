@@ -1,17 +1,26 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { leagueOf, type Knight } from './data/mock';
 
-export const Shield = ({ colors, lg }: { colors: [string, string]; lg?: boolean }) => (
-  <span className={lg ? 'shield lg' : 'shield'} style={{ '--a': colors[0], '--b': colors[1] } as CSSProperties} aria-hidden="true" />
+export interface KnightLook { name: string; colors: [string, string]; division?: string }
+
+const FIELD: Record<string, (a: string, b: string) => string> = {
+  pale: (a, b) => `linear-gradient(90deg, ${a} 50%, ${b} 50%)`,
+  fess: (a, b) => `linear-gradient(180deg, ${a} 50%, ${b} 50%)`,
+  bend: (a, b) => `linear-gradient(135deg, ${a} 50%, ${b} 50%)`,
+  quarterly: (a, b) => `conic-gradient(${b} 0 25%, ${a} 0 50%, ${b} 0 75%, ${a} 0)`,
+};
+
+export const Shield = ({ colors, division = 'pale', lg }: { colors: [string, string]; division?: string; lg?: boolean }) => (
+  <span className={lg ? 'shield lg' : 'shield'} aria-hidden="true"
+    style={{ background: (FIELD[division] ?? FIELD.pale)(colors[0], colors[1]) } as CSSProperties} />
 );
 
-export const KnightCell = ({ k, rating, link = true }: { k: Knight; rating: number; link?: boolean }) => (
+export const KnightCell = ({ k, sub, link = true }: { k: KnightLook; sub?: ReactNode; link?: boolean }) => (
   <span className="knight">
-    <Shield colors={k.colors} />
+    <Shield colors={k.colors} division={k.division} />
     <span className="who">
       {link ? <Link to={`/knight/${k.name}`}>{k.name}</Link> : <b>{k.name}</b>}
-      <small>{leagueOf(rating)} <span className="num">{rating}</span></small>
+      {sub && <small>{sub}</small>}
     </span>
   </span>
 );
@@ -25,3 +34,12 @@ export function Tabs<T extends string>({ value, onChange, options }: { value: T;
     </div>
   );
 }
+
+/** Shown where a page needs an account. */
+export const NeedsLogin = ({ what }: { what: string }) => (
+  <div className="panel">
+    <h2>Log in {what}</h2>
+    <p className="muted">Riding against the bots needs no account. An account keeps your name, heraldry, history and friends.</p>
+    <div className="row"><Link className="btn" to="/register">Create account</Link><Link className="ghost" to="/login">Log in</Link></div>
+  </div>
+);

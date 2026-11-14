@@ -1,61 +1,100 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import emblem from '../../assets/brand/riven-emblem.jpg';
-import { BOTS, FORMATS, knights, type Format } from '../data/mock';
-import { KnightCell, Shield, Tabs } from '../ui';
+import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { BOTS, FORMATS, leagueOf, type Format } from '../data/mock';
+import { acceptFriend, addFriend, asKnight, listFriends, matchesOf, ratingOf, removeFriend, useLoad } from '../lib/api';
+import { useAuth } from '../lib/auth';
+import { KnightCell, NeedsLogin, Tabs } from '../ui';
 
-type Tab = 'new' | 'matches' | 'knights';
+type Tab = 'ride' | 'matches' | 'friends';
+const formatName = (id: Format) => FORMATS.find((f) => f.id === id)!.name;
+
+function Matches({ me }: { me: string }) {
+  const { data, loading } = useLoad(() => matchesOf(me, 12), [me]);
+  if (loading) return <p className="muted">Loading your matches.</p>;
+  if (!data?.length) return <p className="muted">No matches yet. Ride against a bot and it appears here.</p>;
+  return (
+    <ul className="passes">
+      {data.map((m) => (
+        <li key={m.id} style={{ gridTemplateColumns: '1fr auto auto' }}>
+          <span><b>{m.opponent}</b><br /><small className="muted">{formatName(m.format)}, {new Date(m.created_at).toLocaleDateString()}</small></span>
+          <span className="num muted">{m.score_for} : {m.score_against}</span>
+          <b className={m.won ? 'up' : 'down'}>{m.won ? 'Won' : 'Lost'}</b>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Friends({ me, format }: { me: string; format: Format }) {
+  const { online } = useAuth();
+  const { data, loading, reload } = useLoad(() => listFriends(me), [me]);
+  const [error, setError] = useState('');
+  const [sent, setSent] = useState('');
+
+  async function add(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const name = String(new FormData(form).get('name'));
+    setError(''); setSent('');
+    const problem = await addFriend(me, name);
+    if (problem) return setError(problem);
+    setSent(`Request sent to ${name}.`);
+    form.reset();
+    reload();
+  }
+
+  return (
+    <div className="stack">
+      <form className="row" onSubmit={add}>
+        <input name="name" type="text" required placeholder="Knight name" aria-label="Knight name to add" style={{ flex: 1, minWidth: 0 }} />
+        <button className="ghost small">Send request</button>
+      </form>
+      {error && <p className="error" role="alert">{error}</p>}
+      {sent && <p className="ok" role="status">{sent}</p>}
+      {loading ? <p className="muted">Loading your friends.</p> : !data?.length ? (
+        <p className="muted">No friends yet. Add a knight by name; they see your request the next time they open this tab.</p>
+      ) : (
+        <ul className="passes">
+          {data.map(({ profile: p, status, incoming }) => (
+            <li key={p.id} style={{ gridTemplateColumns: 'auto 1fr auto', alignItems: 'center' }}>
+              <span className={online.has(p.username) ? 'dot' : 'dot off'} role="img" aria-label={online.has(p.username) ? 'Online' : 'Offline'} />
+              <KnightCell k={asKnight(p)} sub={status === 'pending' ? (incoming ? 'Wants to be your friend' : 'Request sent') : `${leagueOf(ratingOf(p, format))} ${ratingOf(p, format)}`} />
+              <span className="row">
+                {status === 'pending' && incoming && <button className="btn small" onClick={() => acceptFriend(me, p.id).then(reload)}>Accept</button>}
+                <button className="link" onClick={() => removeFriend(me, p.id).then(reload)}>{status === 'accepted' ? 'Remove' : incoming ? 'Decline' : 'Cancel'}</button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="muted" style={{ margin: 0 }}>Challenging a friend opens with online play.</p>
+    </div>
+  );
+}
 
 export default function Lobby() {
   const nav = useNavigate();
-  const [tab, setTab] = useState<Tab>('new');
+  const { user } = useAuth();
+  const [tab, setTab] = useState<Tab>('ride');
   const [format, setFormat] = useState<Format>('classic');
-  const [rated, setRated] = useState(true);
-  const [seeking, setSeeking] = useState(false);
-  const [link, setLink] = useState('');
-  const [copied, setCopied] = useState(false);
-
-  const start = (vs: string, isRated = rated) => nav(`/match?format=${format}&vs=${encodeURIComponent(vs)}&rated=${isRated ? 1 : 0}`);
-
-  useEffect(() => {
-    if (!seeking) return;
-    // demo: "finds" a random online knight after a short wait
-    const online = knights.filter((k) => k.online);
-    const t = setTimeout(() => start(online[Math.floor(Math.random() * online.length)].name), 2600);
-    return () => clearTimeout(t);
-  }, [seeking]);
 
   return (
     <div className="grid2">
       <div className="stack">
-        <div className="arena">
-          <img className="emblem" src={emblem} alt="" />
-          <span className="rider you"><Shield colors={['#b3121b', '#1b1b1f']} /></span>
-          <span className="rider foe"><Shield colors={['#8d9199', '#1b1b1f']} /></span>
-          <p className="caption">The 3D arena will appear here.</p>
+        <div className="arena art" style={{ backgroundImage: 'url(/media/hero.png)' }}>
+          <p className="caption">The tiltyard. You ride here against the bots today; other knights join when online play opens.</p>
         </div>
         <div className="panel">
-          <h2>Practice against a bot</h2>
-          <div className="stack">
-            {BOTS.map((b) => (
-              <button key={b.name} className="pick" onClick={() => start(b.name, false)}>
-                <b>{b.name} <span className="num muted">{b.rating}</span></b><span>{b.style}</span>
-              </button>
-            ))}
-          </div>
+          <h2>New here?</h2>
+          <p className="muted">A pass lasts six seconds and you control all of it: lance, spurs, shield, one skill and one move at impact.</p>
+          <Link className="ghost" to="/rules">How to play</Link>
         </div>
       </div>
 
       <div className="shield-panel"><div>
-        <Tabs value={tab} onChange={setTab} options={[['new', 'New match'], ['matches', 'Matches'], ['knights', 'Knights']]} />
+        <Tabs value={tab} onChange={setTab} options={[['ride', 'Ride'], ['matches', 'Matches'], ['friends', 'Friends']]} />
 
-        {tab === 'new' && (seeking ? (
-          <div className="seeking" role="status">
-            <div className="pulse" />
-            <p>Looking for a {FORMATS.find((f) => f.id === format)!.name} opponent near your rating.</p>
-            <button className="ghost" onClick={() => setSeeking(false)}>Cancel</button>
-          </div>
-        ) : (
+        {tab === 'ride' && (
           <>
             <fieldset className="choice">
               <legend>Format</legend>
@@ -66,50 +105,20 @@ export default function Lobby() {
                 </label>
               ))}
             </fieldset>
-            <label className="row" style={{ marginBottom: 16 }}>
-              <input type="checkbox" checked={rated} onChange={(e) => setRated(e.target.checked)} /> Rated match
-            </label>
+            <p className="muted" style={{ marginBottom: 8 }}>Choose your opponent</p>
             <div className="stack">
-              <button className="btn big" onClick={() => setSeeking(true)}>Find opponent</button>
-              <button className="ghost" onClick={() => { setLink(`${location.origin}/match?format=${format}&vs=Friend&rated=0`); setCopied(false); }}>
-                Challenge a friend
-              </button>
-              {link && (
-                <div className="row">
-                  <input type="text" readOnly value={link} aria-label="Challenge link" style={{ flex: 1, minWidth: 0 }} onFocus={(e) => e.target.select()} />
-                  <button className="ghost small" onClick={() => navigator.clipboard.writeText(link).then(() => setCopied(true))}>
-                    {copied ? 'Copied' : 'Copy link'}
-                  </button>
-                </div>
-              )}
-              <button className="ghost" onClick={() => nav('/tournaments')}>Tournaments</button>
+              {BOTS.map((b) => (
+                <button key={b.id} className="pick" onClick={() => nav(`/match?format=${format}&vs=${b.id}`)}>
+                  <b>{b.name} <span className="num muted">{b.rating}</span></b><span>{b.style}</span>
+                </button>
+              ))}
+              <button className="ghost" disabled>Find a human opponent</button>
+              <p className="muted" style={{ margin: 0 }}>Ranked matches against other knights open with the arena. Practice matches do not change your rating.</p>
             </div>
           </>
-        ))}
-
-        {tab === 'matches' && (
-          <ul className="passes">
-            {knights.slice(3, 9).map((k, i) => (
-              <li key={k.name} style={{ gridTemplateColumns: '1fr auto auto' }}>
-                <KnightCell k={k} rating={k.rating.classic} />
-                <span className="muted">{FORMATS[i % 3].name}</span>
-                <b className={i % 3 === 1 ? 'down' : 'up'}>{i % 3 === 1 ? 'Lost' : 'Won'}</b>
-              </li>
-            ))}
-          </ul>
         )}
-
-        {tab === 'knights' && (
-          <ul className="passes">
-            {knights.slice(0, 8).map((k) => (
-              <li key={k.name} style={{ gridTemplateColumns: 'auto 1fr auto', alignItems: 'center' }}>
-                <span className={k.online ? 'dot' : 'dot off'} title={k.online ? 'Online' : 'Offline'} />
-                <KnightCell k={k} rating={k.rating[format]} />
-                <button className="ghost small" disabled={!k.online} onClick={() => start(k.name)}>Challenge</button>
-              </li>
-            ))}
-          </ul>
-        )}
+        {tab === 'matches' && (user ? <Matches me={user.id} /> : <NeedsLogin what="to keep a match history" />)}
+        {tab === 'friends' && (user ? <Friends me={user.id} format={format} /> : <NeedsLogin what="to add friends" />)}
       </div></div>
     </div>
   );

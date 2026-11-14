@@ -54,7 +54,8 @@ export default function Auth({ mode }: { mode: 'login' | 'register' }) {
         {notice && <p className="ok" role="status">{notice}</p>}
         <button className="btn" disabled={busy}>{register ? 'Create account' : 'Log in'}</button>
         <p className="muted" style={{ textAlign: 'center' }}>
-          {register ? <>Already have an account? <Link to="/login">Log in</Link></> : <>New here? <Link to="/register">Create account</Link></>}
+          {register ? <>Already have an account? <Link to="/login">Log in</Link></>
+            : <>New here? <Link to="/register">Create account</Link>. <Link to="/forgot">Forgot your password?</Link></>}
         </p>
       </form>
     </div>
