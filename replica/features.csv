@@ -1,0 +1,38 @@
+feature,area,priority,original,clone,notes
+Landing page with play-now call to action,onboarding,must,yes,no,
+Register and log in,onboarding,must,yes,no,
+Play as guest without an account,onboarding,should,yes,no,
+Lobby with format picker and one Play button,play,must,yes,no,Blitz / Classic / Grand
+Matchmaking by rating with a seeking state and cancel,play,must,yes,no,
+Challenge a friend by link,play,must,yes,no,
+Rated or friendly choice,play,must,yes,no,
+Practice against bots with personalities,play,must,yes,no,Headhunter / Turtle / Feinter
+Match screen with two player cards and timers,match,must,yes,no,plan timer instead of chess clock
+Turn list beside the game,match,must,yes,no,pass list
+Yield (resign),match,must,yes,no,
+Abandon and disconnect rules,match,should,yes,no,
+In-match chat or emotes,match,could,yes,no,emotes only
+Result card with rating change,result,must,yes,no,
+Rematch and new-match buttons,result,must,yes,no,
+Post-game review with engine,result,skip,yes,skip,no replays by design; pass summary instead
+Profile with ratings per format,identity,must,yes,no,
+Rating history graph,identity,should,yes,no,
+Win/loss record and recent matches,identity,must,yes,no,
+Leagues by rating,identity,should,yes,no,Squire to Champion
+Trophies on profile,identity,should,yes,no,
+Leaderboard per format,competition,must,yes,no,
+Friends-only leaderboard scope,competition,could,yes,no,
+Tournament list with status and rating band,competition,must,yes,no,
+Tournament lobby and knockout bracket,competition,must,yes,no,8 and 16
+Create a tournament,competition,should,yes,no,
+Swiss and arena tournament types,competition,could,yes,no,later
+Friends list and direct challenge,social,should,yes,no,
+Clubs,social,could,yes,no,
+Spectate live matches,social,could,yes,no,
+Daily training task,training,should,yes,no,drills
+Lessons and courses library,training,skip,yes,skip,their owned content
+Puzzle database,training,skip,yes,skip,their owned content
+Fair-play reporting,trust,should,yes,no,
+Cosmetics shop,money,could,no,no,heraldry / armour / horse; replaces membership tiers
+Paid tiers gating play features,money,skip,yes,skip,RIVEN is cosmetics only
+The existing player network and titled players,network,skip,yes,skip,cannot be rebuilt
