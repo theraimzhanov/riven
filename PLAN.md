@@ -20,21 +20,18 @@ Three phases, in the order you set. Each ends with something you can check.
 |---|---|---|
 | **GitHub** | Code repository, history, backups | Connected and signed in. Ready. |
 | **Supabase** | Accounts, database, live channels, server functions | Ready. Project **RIVEN** (`hgtodegbjjmxiytnpwcv`, us-east-1) is created and healthy. |
-| **Google Cloud** | Hosting the website and the heavy 3D files worldwide (Cloud Storage + CDN, Firebase Hosting) | Not connected. The `gcloud` tool is not installed on this PC. |
+| **Cloudflare** | Website hosting (Pages) and the heavy 3D files (R2: 10 GB free, no charge for downloads) | Account needed. Not required until the site is published or 3D files exist. |
 
-What you do:
-1. Decide the Supabase question above.
-2. Install the Google Cloud CLI, run `gcloud auth login` yourself, and create a Google Cloud project with billing on.
-3. Tell me the name you want for the GitHub repository and whether it is private.
+Done so far: the GitHub repository and the Supabase project exist, and login works.
 
-What I do then (asking before each one, because they create things in your accounts):
-- Create the GitHub repository and push the first commit.
-- Create the Supabase project.
-- Create the storage bucket for 3D files.
+What you do, when you want the site public:
+1. Create a free Cloudflare account.
+2. In the dashboard: Workers & Pages → Create → Pages → Connect to Git, pick `theraimzhanov/riven`, build command `npm run build`, output folder `dist`. Every push to `master` then publishes the site.
+3. Turn on R2. It asks for a payment card even on the free tier.
 
-I never type passwords or keys; you sign in, I use the signed-in tools.
+For uploading 3D files I use Cloudflare's command-line tool after you sign in to it once on this PC. I never type passwords or keys.
 
-**Done when:** a private repo exists with this plan in it, an empty Supabase project is healthy, and a test file uploaded to Google Cloud opens from a public link.
+**Done when:** the site opens from its Cloudflare Pages address, and a test file uploaded to R2 opens from a public link.
 
 ### Phase B — Study chess.com and adapt it
 
@@ -204,8 +201,8 @@ No Higgsfield, Meshy or Blender connector is in this app's connector list today,
 | Accounts, database, server functions | **Supabase** |
 | Live opponent movement | **Supabase Realtime** broadcast, about 20 updates a second, smoothed on screen. Nothing saved. |
 | Who won the pass | Server runs the formula (unchanged). Each player's screen plays the fall with physics from the same force and direction, so both see the same outcome; the exact tumble can differ slightly. |
-| Website hosting | **Firebase Hosting** (Google Cloud) |
-| Model and texture hosting | **Google Cloud Storage + Cloud CDN** |
+| Website hosting | **Cloudflare Pages** |
+| Model and texture hosting | **Cloudflare R2** |
 | Later | **Stripe** for cosmetics, **Sentry** for error reports |
 
 **Who does what**
