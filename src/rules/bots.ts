@@ -7,7 +7,7 @@ export type Bot = (me: KnightState, foe: KnightState, rng: Rng) => PassInput;
 const SWAY: Record<Plan, number> = { charge: 0.2, steady: 0.06, braced: 0.06, feint: 0.12, tempo: 0.15 };
 const pick = <V>(rng: Rng, xs: readonly V[]): V => xs[Math.floor(rng() * xs.length)];
 
-function build(me: KnightState, rng: Rng, o: { plan: Plan; skill?: Skill; target: 'helm' | 'chest'; final: Final } & Partial<PassInput>): PassInput {
+export function ride(me: KnightState, rng: Rng, o: { plan: Plan; skill?: Skill; target: 'helm' | 'chest'; final: Final } & Partial<PassInput>): PassInput {
   const skill = o.skill && skillAllowed(o.skill, me) ? o.skill : 'none';
   const sway = SWAY[o.plan] * (skill === 'couchLate' ? 0.3 : 1);
   const noise = () => (rng() - 0.5) * 2 * sway;
@@ -23,7 +23,7 @@ function build(me: KnightState, rng: Rng, o: { plan: Plan; skill?: Skill; target
 
 /** Aims for the helm every pass and rides hard while the horse lasts. */
 export const headhunter: Bot = (me, _foe, rng) =>
-  build(me, rng, {
+  ride(me, rng, {
     plan: me.stamina > 0.5 ? 'charge' : 'steady',
     skill: me.stamina <= 0.5 ? 'spurBurst' : 'none',
     target: 'helm', final: 'drive', lean: 'in', shield: 'mid',
@@ -31,7 +31,7 @@ export const headhunter: Bot = (me, _foe, rng) =>
 
 /** Braces, waits, wears the shield down. */
 export const turtle: Bot = (me, foe, rng) =>
-  build(me, rng, {
+  ride(me, rng, {
     plan: 'braced',
     skill: me.stamina < 0.4 ? 'secondWind' : rng() < 0.3 ? 'slantGuard' : 'none',
     target: foe.shieldHp === 0 ? 'chest' : pick(rng, ['chest', 'chest', 'helm'] as const),
@@ -40,7 +40,7 @@ export const turtle: Bot = (me, foe, rng) =>
 
 /** Hides the lance and changes pace; you cannot read it early. */
 export const feinter: Bot = (me, _foe, rng) =>
-  build(me, rng, {
+  ride(me, rng, {
     plan: me.stamina > 0.4 ? pick(rng, ['feint', 'tempo'] as const) : 'steady',
     skill: rng() < 0.35 ? 'couchLate' : 'none',
     target: pick(rng, ['helm', 'chest'] as const),

@@ -248,3 +248,9 @@ input:focus { border-color: var(--steel); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- match controls ---------- */
+select { background: var(--plate); border: 1px solid var(--edge); color: var(--bone); font: inherit; padding: 8px 10px; width: 100%; }
+.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+.wear { display: flex; gap: 14px; flex-wrap: wrap; font-size: .9375rem; color: var(--steel); }
+.wear b { color: var(--bone); font: 600 1rem var(--tight); }
